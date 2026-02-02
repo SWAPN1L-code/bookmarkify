@@ -1,0 +1,176 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// CORE ENTITIES
+// ============================================
+
+model Organization {
+  id            String   @id @default(uuid())
+  name          String
+  slug          String   @unique
+  plan          String   @default("free") // free, pro, enterprise
+  maxUsers      Int      @default(5)
+  maxBookmarks  Int      @default(1000)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  users         User[]
+  folders       Folder[]
+  tags          Tag[]
+  bookmarks     Bookmark[]
+
+  @@map("organizations")
+}
+
+model User {
+  id              String    @id @default(uuid())
+  organizationId  String
+  email           String    @unique
+  password        String
+  name            String?
+  avatarUrl       String?
+  role            String    @default("member") // owner, admin, member
+  emailVerified   Boolean   @default(false)
+  isActive        Boolean   @default(true)
+  lastLoginAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  bookmarks       Bookmark[]
+  folders         Folder[]
+  tags            Tag[]
+  refreshTokens   RefreshToken[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id          String   @id @default(uuid())
+  userId      String
+  token       String   @unique
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@map("refresh_tokens")
+}
+
+// ============================================
+// BOOKMARK MANAGEMENT
+// ============================================
+
+model Folder {
+  id              String    @id @default(uuid())
+  organizationId  String
+  userId          String
+  parentId        String?
+  name            String
+  color           String?   @default("#6366f1")
+  icon            String?
+  position        Int       @default(0)
+  isShared        Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent          Folder?      @relation("FolderToFolder", fields: [parentId], references: [id], onDelete: SetNull)
+  children        Folder[]     @relation("FolderToFolder")
+  bookmarks       Bookmark[]
+
+  @@index([userId])
+  @@index([parentId])
+  @@map("folders")
+}
+
+model Tag {
+  id              String   @id @default(uuid())
+  organizationId  String
+  userId          String
+  name            String
+  color           String   @default("#6366f1")
+  usageCount      Int      @default(0)
+  createdAt       DateTime @default(now())
+
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookmarks       BookmarkTag[]
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("tags")
+}
+
+model Bookmark {
+  id              String    @id @default(uuid())
+  organizationId  String
+  userId          String
+  folderId        String?
+  
+  // Core fields
+  url             String
+  urlHash         String    // MD5 hash for duplicate detection
+  title           String
+  description     String?
+  notes           String?
+  
+  // Metadata (auto-fetched)
+  faviconUrl      String?
+  ogImageUrl      String?
+  ogDescription   String?
+  domain          String?
+  
+  // Status flags
+  isFavorite      Boolean   @default(false)
+  isArchived      Boolean   @default(false)
+  isPublic        Boolean   @default(false)
+  
+  // Activity tracking
+  visitCount      Int       @default(0)
+  lastVisitedAt   DateTime?
+  
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime? // Soft delete
+
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folder          Folder?       @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  tags            BookmarkTag[]
+
+  @@unique([userId, urlHash])
+  @@index([userId])
+  @@index([folderId])
+  @@index([isFavorite])
+  @@index([isArchived])
+  @@index([createdAt])
+  @@map("bookmarks")
+}
+
+// Junction table for many-to-many bookmark-tag relationship
+model BookmarkTag {
+  bookmarkId  String
+  tagId       String
+  createdAt   DateTime @default(now())
+
+  bookmark    Bookmark @relation(fields: [bookmarkId], references: [id], onDelete: Cascade)
+  tag         Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([bookmarkId, tagId])
+  @@map("bookmark_tags")
+}
