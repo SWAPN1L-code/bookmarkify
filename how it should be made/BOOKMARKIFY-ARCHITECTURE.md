@@ -497,8 +497,6 @@ module "eks" { ... }
 
 ---
 
-## ✅ Fixes to Your Original Architecture
-
 ### Problems Identified
 
 1. ❌ **No migration strategy** → ✅ Versioned migrations + conflict resolution
