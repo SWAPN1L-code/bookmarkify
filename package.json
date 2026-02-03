@@ -6,6 +6,7 @@
         "packages/*"
     ],
     "scripts": {
+        "dev": "concurrently -n API,WEB -c red,blue,green \"npm run dev:api\" \"npm run dev:web\"",
         "dev:web": "npm run dev -w apps/web",
         "build:web": "npm run build -w apps/web",
         "dev:ext": "npm run dev -w apps/extension",
@@ -13,5 +14,8 @@
         "dev:api": "npm run start:dev -w apps/api",
         "build:api": "npm run build -w apps/api",
         "lint": "npm run lint -w apps/web"
+    },
+    "devDependencies": {
+        "concurrently": "^9.2.1"
     }
 }
