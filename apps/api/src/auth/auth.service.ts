@@ -101,6 +101,11 @@ export class AuthService {
             throw new UnauthorizedException('Account is deactivated');
         }
 
+        // Check if user has a password (if not, they are an OAuth user)
+        if (!user.password) {
+            throw new UnauthorizedException('Please log in with Google or GitHub');
+        }
+
         // Verify password
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
@@ -112,6 +117,70 @@ export class AuthService {
             where: { id: user.id },
             data: { lastLoginAt: new Date() },
         });
+
+        // Generate tokens
+        const tokens = await this.generateTokens(user);
+
+        return {
+            user: {
+                id: user.id,
+                email: user.email,
+                name: user.name,
+                role: user.role,
+                organizationId: user.organizationId,
+            },
+            ...tokens,
+        };
+    }
+
+    async validateOAuthLogin(profile: {
+        email: string;
+        name: string;
+        provider: string;
+        providerId: string;
+        avatarUrl?: string;
+    }) {
+        const { email, name, provider, providerId, avatarUrl } = profile;
+
+        // Check if user exists
+        let user = await this.prisma.user.findUnique({
+            where: { email },
+        });
+
+        if (user) {
+            // Update user with OAuth info if missing or just to sync
+            if (!user.provider || user.provider === 'email') {
+                user = await this.prisma.user.update({
+                    where: { id: user.id },
+                    data: { provider, providerId, avatarUrl: user.avatarUrl || avatarUrl },
+                });
+            }
+        } else {
+            // Create new user (and organization)
+            const result = await this.prisma.$transaction(async (tx) => {
+                const organization = await tx.organization.create({
+                    data: {
+                        name: `${name || email}'s Workspace`,
+                        slug: this.generateSlug(name || email),
+                    },
+                });
+
+                const newUser = await tx.user.create({
+                    data: {
+                        email,
+                        name,
+                        provider,
+                        providerId,
+                        avatarUrl,
+                        organizationId: organization.id,
+                        role: 'owner',
+                    },
+                });
+
+                return newUser;
+            });
+            user = result;
+        }
 
         // Generate tokens
         const tokens = await this.generateTokens(user);

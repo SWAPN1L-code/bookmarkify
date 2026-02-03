@@ -5,8 +5,13 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
+import { GoogleStrategy } from './strategies/google.strategy';
+import { GithubStrategy } from './strategies/github.strategy';
+import { ConfigModule } from '@nestjs/config';
+
 @Module({
     imports: [
+        ConfigModule,
         PassportModule.register({ defaultStrategy: 'jwt' }),
         JwtModule.register({
             secret: process.env.JWT_SECRET || 'super-secret-key-change-in-production',
@@ -14,7 +19,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
         }),
     ],
     controllers: [AuthController],
-    providers: [AuthService, JwtStrategy],
+    providers: [AuthService, JwtStrategy, GoogleStrategy, GithubStrategy],
     exports: [AuthService, JwtStrategy],
 })
 export class AuthModule { }

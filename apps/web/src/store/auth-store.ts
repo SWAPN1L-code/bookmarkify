@@ -17,6 +17,7 @@ interface AuthState {
     register: (data: any) => Promise<void>;
     logout: () => void;
     checkAuth: () => boolean;
+    setAuth: (accessToken: string, refreshToken: string, user: any) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -37,15 +38,20 @@ export const useAuthStore = create<AuthState>()(
                 set({ user: data.user, isAuthenticated: true });
             },
             logout: () => {
-                localStorage.removeItem('accessToken');
-                localStorage.removeItem('refreshToken');
+                localStorage.clear(); // Clear everything
                 set({ user: null, isAuthenticated: false });
+                window.location.href = '/login'; // Force full reload to login page
             },
             checkAuth: () => {
                 const token = localStorage.getItem('accessToken');
                 const isAuthenticated = !!token;
                 set({ isAuthenticated });
                 return isAuthenticated;
+            },
+            setAuth: (accessToken, refreshToken, user) => {
+                localStorage.setItem('accessToken', accessToken);
+                localStorage.setItem('refreshToken', refreshToken);
+                set({ user, isAuthenticated: true });
             },
         }),
         {

@@ -3,6 +3,7 @@ import { Toaster } from 'sonner';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LoginPage } from './pages/auth/login';
 import { RegisterPage } from './pages/auth/register';
+import { OAuthCallbackPage } from './pages/auth/oauth-callback';
 import { DashboardLayout } from './pages/dashboard/layout';
 import { DashboardPage } from './pages/dashboard/index';
 import { useAuthStore } from './store/auth-store';
@@ -35,6 +36,7 @@ function App() {
                 <Routes>
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/register" element={<RegisterPage />} />
+                    <Route path="/oauth/callback" element={<OAuthCallbackPage />} />
 
                     <Route element={<ProtectedRoute />}>
                         <Route element={<DashboardLayout />}>
