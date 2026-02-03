@@ -23,13 +23,38 @@ const badgeVariants = cva(
     }
 )
 
+// Helper to compute luminance and determine if text should be light or dark
+function getContrastColor(hexColor: string): string {
+    // Remove # if present
+    const hex = hexColor.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    // Calculate luminance
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.5 ? '#000000' : '#ffffff';
+}
+
 export interface BadgeProps
     extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof badgeVariants> { }
+    VariantProps<typeof badgeVariants> {
+    color?: string;
+}
 
-function Badge({ className, variant, ...props }: BadgeProps) {
+function Badge({ className, variant, color, style, ...props }: BadgeProps) {
+    const colorStyle = color ? {
+        backgroundColor: color,
+        color: getContrastColor(color),
+        borderColor: 'transparent',
+        ...style,
+    } : style;
+
     return (
-        <div className={cn(badgeVariants({ variant }), className)} {...props} />
+        <div
+            className={cn(badgeVariants({ variant: color ? undefined : variant }), className)}
+            style={colorStyle}
+            {...props}
+        />
     )
 }
 

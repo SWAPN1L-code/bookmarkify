@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/auth-store';
+import { useTheme } from '@/hooks/use-theme';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -16,6 +17,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { Sun, Moon } from 'lucide-react';
 
 const registerSchema = z.object({
     name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -29,6 +31,7 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 export function RegisterPage() {
     const navigate = useNavigate();
     const registerUser = useAuthStore((state) => state.register);
+    const { toggleTheme, isDark } = useTheme();
     const [isLoading, setIsLoading] = useState(false);
 
     const {
@@ -53,7 +56,20 @@ export function RegisterPage() {
     };
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-muted/40">
+        <div className="flex items-center justify-center min-h-screen bg-muted/40 relative">
+            <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleTheme}
+                aria-label="Toggle dark mode"
+                className="absolute top-4 right-4 focus-visible:ring-2 focus-visible:ring-ring"
+            >
+                {isDark ? (
+                    <Sun className="h-5 w-5" />
+                ) : (
+                    <Moon className="h-5 w-5" />
+                )}
+            </Button>
             <Card className="w-full max-w-md">
                 <CardHeader>
                     <CardTitle className="text-2xl font-bold text-center">

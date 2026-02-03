@@ -1,28 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { useBookmarks, useUpdateBookmark, useFolders } from '@/hooks/use-data';
+import { useBookmarks, useDeleteBookmark, useToggleFavorite, useToggleArchive, useUpdateBookmark } from '@/hooks/use-data';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
-import { Search, Trash2, MoreVertical, Globe, Calendar, FolderPlus } from 'lucide-react';
+import { Search, Trash2, Globe, Calendar, Star, Archive } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { AddBookmarkDialog } from '@/components/bookmarks/add-bookmark-dialog';
-import { DeleteFolderDialog } from '@/components/folders/delete-folder-dialog';
-import { useDraggable } from '@dnd-kit/core';
-import { toast } from 'sonner';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-    DropdownMenuSub,
-    DropdownMenuSubTrigger,
-    DropdownMenuSubContent,
-    DropdownMenuPortal,
-} from '@/components/ui/dropdown-menu';
+import { FolderPicker } from '@/components/ui/folder-picker';
 
 interface DashboardPageProps {
     filter?: 'favorites' | 'archive';
@@ -127,26 +113,26 @@ export function DashboardPage({ filter }: DashboardPageProps) {
     );
 }
 
-function BookmarkCard({ bookmark, folders }: { bookmark: any; folders: any[] | undefined }) {
-    const { mutate: updateBookmark } = useUpdateBookmark();
-    const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-        id: bookmark.id,
-        data: { type: 'bookmark', bookmark }
-    });
+function BookmarkCard({ bookmark }: { bookmark: any }) {
+    const deleteMutation = useDeleteBookmark();
+    const favoriteMutation = useToggleFavorite();
+    const archiveMutation = useToggleArchive();
+    const updateMutation = useUpdateBookmark();
 
-    const style = transform ? {
-        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-        zIndex: isDragging ? 100 : undefined,
-    } : undefined;
+    const handleFavorite = () => {
+        favoriteMutation.mutate(bookmark.id);
+    };
 
-    const onMoveToFolder = (folderId: string) => {
-        updateBookmark(
-            { id: bookmark.id, folderId },
-            {
-                onSuccess: () => toast.success('Moved to collection'),
-                onError: () => toast.error('Failed to move bookmark'),
-            }
-        );
+    const handleArchive = () => {
+        archiveMutation.mutate(bookmark.id);
+    };
+
+    const handleDelete = () => {
+        deleteMutation.mutate(bookmark.id);
+    };
+
+    const handleFolderSelect = (folderId: string | null) => {
+        updateMutation.mutate({ id: bookmark.id, folderId });
     };
 
     return (
@@ -229,47 +215,84 @@ function BookmarkCard({ bookmark, folders }: { bookmark: any; folders: any[] | u
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
-                    <a
-                        href={bookmark.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-medium hover:text-primary line-clamp-2 leading-tight block group-hover:underline decoration-primary/50 underline-offset-2"
-                        onPointerDown={(e) => e.stopPropagation()}
-                    >
-                        {bookmark.title}
-                    </a>
-                </CardHeader>
-                <CardContent className="p-4 pt-0 flex-1">
-                    {bookmark.description && (
-                        <p className="text-sm text-muted-foreground line-clamp-2 mt-1 mb-3">
-                            {bookmark.description}
-                        </p>
-                    )}
-                    <div className="flex flex-wrap gap-1.5 mt-auto">
-                        {bookmark.tags?.map((tag: any) => (
-                            <Badge key={tag.id} variant="secondary" className="px-1.5 py-0 text-[10px] font-normal text-muted-foreground bg-muted hover:bg-muted/80 border-transparent">
-                                #{tag.name}
-                            </Badge>
-                        ))}
-                    </div>
-                </CardContent>
-                <CardFooter className="p-3 bg-muted/5 text-xs text-muted-foreground flex justify-between items-center mt-auto border-t">
-                    <span className="flex items-center gap-1.5 opacity-70">
-                        <Calendar className="h-3 w-3" />
-                        {formatDistanceToNow(new Date(bookmark.createdAt), { addSuffix: true })}
-                    </span>
-                    {!bookmark.isArchived && (
+                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="h-6 w-6 text-muted-foreground hover:text-destructive hover:bg-destructive/10 -mr-1"
-                            onPointerDown={(e) => e.stopPropagation()}
+                            className="h-6 w-6"
+                            onClick={handleFavorite}
+                            disabled={favoriteMutation.isPending}
+                            aria-label={bookmark.isFavorite ? "Remove from favorites" : "Add to favorites"}
+                            title={bookmark.isFavorite ? "Remove from favorites" : "Add to favorites"}
                         >
-                            <Trash2 className="h-3 w-3" />
+                            <Star
+                                className={`h-3 w-3 ${bookmark.isFavorite ? 'fill-yellow-400 text-yellow-400' : ''}`}
+                            />
                         </Button>
-                    )}
-                </CardFooter>
-            </Card>
-        </div>
+                        <FolderPicker
+                            onSelect={handleFolderSelect}
+                            currentFolderId={bookmark.folderId}
+                        />
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={handleArchive}
+                            disabled={archiveMutation.isPending}
+                            aria-label={bookmark.isArchived ? "Unarchive" : "Archive"}
+                            title={bookmark.isArchived ? "Unarchive" : "Archive"}
+                        >
+                            <Archive
+                                className={`h-3 w-3 ${bookmark.isArchived ? 'fill-current text-muted-foreground' : ''}`}
+                            />
+                        </Button>
+                    </div>
+                </div>
+                <a
+                    href={bookmark.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium hover:text-primary line-clamp-2 leading-tight block group-hover:underline decoration-primary/50 underline-offset-2"
+                >
+                    {bookmark.title}
+                </a>
+            </CardHeader>
+            <CardContent className="p-4 pt-0 flex-1">
+                {bookmark.description && (
+                    <p className="text-sm text-muted-foreground line-clamp-2 mt-1 mb-3">
+                        {bookmark.description}
+                    </p>
+                )}
+                <div className="flex flex-wrap gap-1.5 mt-auto">
+                    {bookmark.tags?.map((tag: any) => (
+                        <Badge
+                            key={tag.id}
+                            color={tag.color}
+                            variant="secondary"
+                            className="px-1.5 py-0 text-[10px] font-normal"
+                        >
+                            #{tag.name}
+                        </Badge>
+                    ))}
+                </div>
+            </CardContent>
+            <CardFooter className="p-3 bg-muted/5 text-xs text-muted-foreground flex justify-between items-center mt-auto border-t">
+                <span className="flex items-center gap-1.5 opacity-70">
+                    <Calendar className="h-3 w-3" />
+                    {formatDistanceToNow(new Date(bookmark.createdAt), { addSuffix: true })}
+                </span>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-muted-foreground hover:text-destructive hover:bg-destructive/10 -mr-1"
+                    onClick={handleDelete}
+                    disabled={deleteMutation.isPending}
+                    aria-label="Delete bookmark"
+                    title="Delete bookmark"
+                >
+                    <Trash2 className="h-3 w-3" />
+                </Button>
+            </CardFooter>
+        </Card>
     );
 }

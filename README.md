@@ -67,14 +67,6 @@ The project is organized as a monorepo:
 
 You can run development servers for each application. It is recommended to run the API and Web App in separate terminal windows.
 
-0. **Start Application**
-
-    ```bash
-    npm run dev
-    ```
-    *API will run on [http://localhost:3000](http://localhost:3000)*
-    *Web App will run on [http://localhost:5173](http://localhost:5173)*
-
 1.  **Start Backend API:**
 
     ```bash

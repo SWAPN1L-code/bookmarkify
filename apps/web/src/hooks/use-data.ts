@@ -96,3 +96,43 @@ export function useTags() {
         },
     });
 }
+
+export function useToggleFavorite() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (id: string) => {
+            const { data } = await api.post(`/bookmarks/${id}/favorite`);
+            return data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
+        },
+    });
+}
+
+export function useToggleArchive() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (id: string) => {
+            const { data } = await api.post(`/bookmarks/${id}/archive`);
+            return data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
+        },
+    });
+}
+
+export function useUpdateBookmark() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async ({ id, ...updateData }: { id: string; folderId?: string | null }) => {
+            const { data } = await api.put(`/bookmarks/${id}`, updateData);
+            return data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
+            queryClient.invalidateQueries({ queryKey: ['folders'] });
+        },
+    });
+}

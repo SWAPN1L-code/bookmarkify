@@ -6,7 +6,6 @@
         "packages/*"
     ],
     "scripts": {
-        "dev": "concurrently -n API,WEB,EXT -c red,blue,green \"npm run dev:api\" \"npm run dev:web\"",
         "dev:web": "npm run dev -w apps/web",
         "build:web": "npm run build -w apps/web",
         "dev:ext": "npm run dev -w apps/extension",
