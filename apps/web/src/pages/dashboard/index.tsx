@@ -8,6 +8,7 @@ import { Search, Trash2, MoreVertical, Globe, Calendar, FolderPlus } from 'lucid
 import { formatDistanceToNow } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { AddBookmarkDialog } from '@/components/bookmarks/add-bookmark-dialog';
+import { DeleteFolderDialog } from '@/components/folders/delete-folder-dialog';
 import { useDraggable } from '@dnd-kit/core';
 import { toast } from 'sonner';
 import {
@@ -30,6 +31,8 @@ interface DashboardPageProps {
 export function DashboardPage({ filter }: DashboardPageProps) {
     const { folderId } = useParams();
     const { data: folders } = useFolders();
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const currentFolder = folders?.find((f: any) => f.id === folderId);
 
     const [search, setSearch] = useState('');
 
@@ -53,10 +56,21 @@ export function DashboardPage({ filter }: DashboardPageProps) {
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">
+                    <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
                         {filter === 'favorites' ? 'Favorites' :
                             filter === 'archive' ? 'Archive' :
-                                folderId ? 'Folder View' : 'All Bookmarks'}
+                                folderId ? currentFolder?.name || 'Folder View' : 'All Bookmarks'}
+
+                        {folderId && currentFolder && (
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                onClick={() => setIsDeleteDialogOpen(true)}
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        )}
                     </h1>
                     <p className="text-muted-foreground">
                         {data?.meta?.total || 0} items
@@ -99,6 +113,15 @@ export function DashboardPage({ filter }: DashboardPageProps) {
                         <BookmarkCard key={bookmark.id} bookmark={bookmark} folders={folders} />
                     ))}
                 </div>
+            )}
+
+            {folderId && currentFolder && (
+                <DeleteFolderDialog
+                    folder={currentFolder}
+                    open={isDeleteDialogOpen}
+                    onOpenChange={setIsDeleteDialogOpen}
+                    redirectOnDelete
+                />
             )}
         </div>
     );

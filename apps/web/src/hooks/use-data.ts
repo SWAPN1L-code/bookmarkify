@@ -60,6 +60,19 @@ export function useCreateFolder() {
     });
 }
 
+export function useDeleteFolder() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (id: string) => {
+            await api.delete(`/folders/${id}`);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['folders'] });
+            queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
+        },
+    });
+}
+
 export function useUpdateBookmark() {
     const queryClient = useQueryClient();
     return useMutation({

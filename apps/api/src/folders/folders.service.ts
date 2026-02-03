@@ -52,6 +52,13 @@ export class FoldersService {
             where: { userId },
             orderBy: [{ parentId: 'asc' }, { position: 'asc' }],
             include: {
+                bookmarks: {
+                    where: { deletedAt: null },
+                    orderBy: { createdAt: 'desc' },
+                    include: {
+                        tags: { include: { tag: true } }
+                    }
+                },
                 _count: { select: { bookmarks: true, children: true } },
             },
         });
