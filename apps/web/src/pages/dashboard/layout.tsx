@@ -41,6 +41,6 @@ export function DashboardLayout() {
                     <Outlet />
                 </main>
             </div>
-        </div>
+        </DndContext>
     );
 }

@@ -8,13 +8,23 @@ import {
     Archive,
     Hash,
     Folder,
-    Plus,
     ChevronRight,
     ChevronDown,
-    Loader2
+    Loader2,
+    Link as LinkIcon
 } from 'lucide-react';
 import { useState } from 'react';
 import { useFolders, useTags } from '@/hooks/use-data';
+import { CreateFolderDialog } from '../folders/create-folder-dialog';
+import { DeleteFolderDialog } from '../folders/delete-folder-dialog';
+import { useDroppable } from '@dnd-kit/core';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { MoreVertical, Trash2 } from 'lucide-react';
 
 export function Sidebar() {
     const location = useLocation();
@@ -63,9 +73,7 @@ export function Sidebar() {
                         <h2 className="text-lg font-semibold tracking-tight">
                             Collections
                         </h2>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <Plus className="h-4 w-4" />
-                        </Button>
+                        <CreateFolderDialog />
                     </div>
                     <ScrollArea className="h-[250px] px-1">
                         <div className="space-y-1">
@@ -110,14 +118,23 @@ export function Sidebar() {
 
 function FolderItem({ folder, level = 0 }: { folder: any; level?: number }) {
     const [isOpen, setIsOpen] = useState(false);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const hasChildren = folder.children && folder.children.length > 0;
+    const hasBookmarks = folder.bookmarks && folder.bookmarks.length > 0;
+    const hasSubItems = hasChildren || hasBookmarks;
     const location = useLocation();
     const isActive = location.pathname === `/folder/${folder.id}`;
 
+    // DnD droppable
+    const { isOver, setNodeRef } = useDroppable({
+        id: `folder-${folder.id}`,
+        data: { type: 'folder', id: folder.id }
+    });
+
     return (
-        <div>
+        <div ref={setNodeRef} className={cn(isOver && "bg-accent/50 rounded-md transition-colors", "group")}>
             <div className="flex items-center">
-                {hasChildren && (
+                {hasSubItems && (
                     <Button
                         variant="ghost"
                         size="sm"
@@ -133,20 +150,68 @@ function FolderItem({ folder, level = 0 }: { folder: any; level?: number }) {
                 <Link to={`/folder/${folder.id}`} className="flex-1">
                     <Button
                         variant={isActive ? 'secondary' : 'ghost'}
-                        className={cn("w-full justify-start h-9", !hasChildren && "pl-8")}
+                        className={cn("w-full justify-start h-9", !hasSubItems && "pl-8")}
                     >
                         <Folder className={cn("mr-2 h-4 w-4", isActive ? "fill-current" : "")} />
                         <span className="truncate">{folder.name}</span>
                     </Button>
                 </Link>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => e.preventDefault()}
+                        >
+                            <MoreVertical className="h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setIsDeleteDialogOpen(true);
+                            }}
+                        >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
-            {isOpen && hasChildren && (
-                <div className="ml-4 border-l pl-2">
-                    {folder.children.map((child: any) => (
+            {isOpen && (
+                <div className="ml-4 border-l pl-2 space-y-0.5">
+                    {hasChildren && folder.children.map((child: any) => (
                         <FolderItem key={child.id} folder={child} level={level + 1} />
+                    ))}
+                    {hasBookmarks && folder.bookmarks.map((bookmark: any) => (
+                        <a
+                            key={bookmark.id}
+                            href={bookmark.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center"
+                        >
+                            <Button
+                                variant="ghost"
+                                className="w-full justify-start h-8 pl-8 text-xs font-normal text-muted-foreground hover:text-foreground"
+                            >
+                                <LinkIcon className="mr-2 h-3 w-3" />
+                                <span className="truncate">{bookmark.title}</span>
+                            </Button>
+                        </a>
                     ))}
                 </div>
             )}
+
+            <DeleteFolderDialog
+                folder={folder}
+                open={isDeleteDialogOpen}
+                onOpenChange={setIsDeleteDialogOpen}
+            />
         </div>
     );
 }

@@ -16,6 +16,9 @@ interface DashboardPageProps {
 
 export function DashboardPage({ filter }: DashboardPageProps) {
     const { folderId } = useParams();
+    const { data: folders } = useFolders();
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const currentFolder = folders?.find((f: any) => f.id === folderId);
 
     const [search, setSearch] = useState('');
 
@@ -39,10 +42,21 @@ export function DashboardPage({ filter }: DashboardPageProps) {
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">
+                    <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
                         {filter === 'favorites' ? 'Favorites' :
                             filter === 'archive' ? 'Archive' :
-                                folderId ? 'Folder View' : 'All Bookmarks'}
+                                folderId ? currentFolder?.name || 'Folder View' : 'All Bookmarks'}
+
+                        {folderId && currentFolder && (
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                onClick={() => setIsDeleteDialogOpen(true)}
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        )}
                     </h1>
                     <p className="text-muted-foreground">
                         {data?.meta?.total || 0} items
@@ -82,9 +96,18 @@ export function DashboardPage({ filter }: DashboardPageProps) {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {data?.data?.map((bookmark: any) => (
-                        <BookmarkCard key={bookmark.id} bookmark={bookmark} />
+                        <BookmarkCard key={bookmark.id} bookmark={bookmark} folders={folders} />
                     ))}
                 </div>
+            )}
+
+            {folderId && currentFolder && (
+                <DeleteFolderDialog
+                    folder={currentFolder}
+                    open={isDeleteDialogOpen}
+                    onOpenChange={setIsDeleteDialogOpen}
+                    redirectOnDelete
+                />
             )}
         </div>
     );
@@ -113,20 +136,84 @@ function BookmarkCard({ bookmark }: { bookmark: any }) {
     };
 
     return (
-        <Card className="flex flex-col h-full hover:shadow-md transition-all group border-muted/60 hover:border-primary/50">
-            <CardHeader className="p-4 pb-2 space-y-2">
-                <div className="flex justify-between items-start gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                        {bookmark.faviconUrl ? (
-                            <img src={bookmark.faviconUrl} alt="" className="w-4 h-4 rounded-sm" />
-                        ) : (
-                            <div className="w-5 h-5 rounded overflow-hidden flex-shrink-0 bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
-                                {bookmark.domain?.[0]?.toUpperCase() || 'B'}
-                            </div>
-                        )}
-                        <span className="text-xs text-muted-foreground truncate" title={bookmark.domain}>
-                            {bookmark.domain}
-                        </span>
+        <div ref={setNodeRef} style={style} {...listeners} {...attributes}>
+            <Card className="flex flex-col h-full hover:shadow-md transition-all group border-muted/60 hover:border-primary/50 cursor-grab active:cursor-grabbing">
+                <CardHeader className="p-4 pb-2 space-y-2">
+                    <div className="flex justify-between items-start gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                            {bookmark.faviconUrl ? (
+                                <img src={bookmark.faviconUrl} alt="" className="w-4 h-4 rounded-sm" />
+                            ) : (
+                                <div className="w-5 h-5 rounded overflow-hidden flex-shrink-0 bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
+                                    {bookmark.domain?.[0]?.toUpperCase() || 'B'}
+                                </div>
+                            )}
+                            <span className="text-xs text-muted-foreground truncate" title={bookmark.domain}>
+                                {bookmark.domain}
+                            </span>
+                        </div>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onPointerDown={(e) => e.stopPropagation()}
+                                >
+                                    <MoreVertical className="h-3 w-3" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuSub>
+                                    <DropdownMenuSubTrigger onPointerDown={(e) => e.stopPropagation()}>
+                                        <FolderPlus className="mr-2 h-4 w-4" />
+                                        <span>Move to Collection</span>
+                                    </DropdownMenuSubTrigger>
+                                    <DropdownMenuPortal>
+                                        <DropdownMenuSubContent onPointerDown={(e) => e.stopPropagation()}>
+                                            {folders?.length === 0 ? (
+                                                <div className="p-2 text-xs text-muted-foreground">No collections found</div>
+                                            ) : (
+                                                folders?.map((folder: any) => (
+                                                    <DropdownMenuItem
+                                                        key={folder.id}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            onMoveToFolder(folder.id);
+                                                        }}
+                                                    >
+                                                        {folder.name}
+                                                    </DropdownMenuItem>
+                                                ))
+                                            )}
+                                        </DropdownMenuSubContent>
+                                    </DropdownMenuPortal>
+                                </DropdownMenuSub>
+                                <DropdownMenuItem
+                                    className="text-destructive focus:text-destructive"
+                                    onPointerDown={(e) => e.stopPropagation()}
+                                >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    <span>Delete</span>
+                                </DropdownMenuItem>
+                                {bookmark.folderId && (
+                                    <>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onMoveToFolder(null as any);
+                                            }}
+                                        >
+                                            <FolderPlus className="mr-2 h-4 w-4 rotate-180" />
+                                            <span>Remove from Collection</span>
+                                        </DropdownMenuItem>
+                                    </>
+                                )}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                     <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Button
