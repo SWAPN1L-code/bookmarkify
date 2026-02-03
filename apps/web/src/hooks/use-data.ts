@@ -123,16 +123,4 @@ export function useToggleArchive() {
     });
 }
 
-export function useUpdateBookmark() {
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: async ({ id, ...updateData }: { id: string; folderId?: string | null }) => {
-            const { data } = await api.put(`/bookmarks/${id}`, updateData);
-            return data;
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
-            queryClient.invalidateQueries({ queryKey: ['folders'] });
-        },
-    });
-}
+
