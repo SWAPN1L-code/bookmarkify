@@ -112,8 +112,17 @@ function BookmarkCard({ bookmark }: { bookmark: any }) {
         updateMutation.mutate({ id: bookmark.id, folderId });
     };
 
+    const handleDragStart = (e: React.DragEvent) => {
+        e.dataTransfer.setData('bookmarkId', bookmark.id);
+        e.dataTransfer.effectAllowed = 'move';
+    };
+
     return (
-        <Card className="flex flex-col h-full hover:shadow-md transition-all group border-muted/60 hover:border-primary/50">
+        <Card
+            draggable
+            onDragStart={handleDragStart}
+            className="flex flex-col h-full hover:shadow-md transition-all group border-muted/60 hover:border-primary/50 cursor-grab active:cursor-grabbing"
+        >
             <CardHeader className="p-4 pb-2 space-y-2">
                 <div className="flex justify-between items-start gap-2">
                     <div className="flex items-center gap-2 min-w-0">

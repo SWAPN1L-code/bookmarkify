@@ -47,6 +47,45 @@ export function useFolders() {
     });
 }
 
+export function useCreateFolder() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (newFolder: { name: string; parentId?: string; color?: string; icon?: string }) => {
+            const { data } = await api.post('/folders', newFolder);
+            return data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['folders'] });
+        },
+    });
+}
+
+export function useUpdateFolder() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async ({ id, ...updateData }: { id: string; name?: string; parentId?: string; color?: string; icon?: string }) => {
+            const { data } = await api.put(`/folders/${id}`, updateData);
+            return data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['folders'] });
+        },
+    });
+}
+
+export function useDeleteFolder() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (id: string) => {
+            await api.delete(`/folders/${id}`);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['folders'] });
+            queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
+        },
+    });
+}
+
 export function useTags() {
     return useQuery({
         queryKey: ['tags'],

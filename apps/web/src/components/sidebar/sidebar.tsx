@@ -8,13 +8,14 @@ import {
     Archive,
     Hash,
     Folder,
-    Plus,
     ChevronRight,
     ChevronDown,
     Loader2
 } from 'lucide-react';
 import { useState } from 'react';
-import { useFolders, useTags } from '@/hooks/use-data';
+import { useFolders, useTags, useUpdateBookmark } from '@/hooks/use-data';
+import { CreateFolderDialog } from '@/components/folders/CreateFolderDialog';
+import { toast } from 'sonner';
 
 export function Sidebar() {
     const location = useLocation();
@@ -63,9 +64,7 @@ export function Sidebar() {
                         <h2 className="text-lg font-semibold tracking-tight">
                             Collections
                         </h2>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <Plus className="h-4 w-4" />
-                        </Button>
+                        <CreateFolderDialog />
                     </div>
                     <ScrollArea className="h-[250px] px-1">
                         <div className="space-y-1">
@@ -110,13 +109,47 @@ export function Sidebar() {
 
 function FolderItem({ folder, level = 0 }: { folder: any; level?: number }) {
     const [isOpen, setIsOpen] = useState(false);
+    const [isDragOver, setIsDragOver] = useState(false);
+    const updateBookmark = useUpdateBookmark();
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragOver(true);
+    };
+
+    const handleDragLeave = () => {
+        setIsDragOver(false);
+    };
+
+    const handleDrop = async (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragOver(false);
+        const bookmarkId = e.dataTransfer.getData('bookmarkId');
+        if (!bookmarkId) return;
+
+        try {
+            await updateBookmark.mutateAsync({ id: bookmarkId, folderId: folder.id });
+            toast.success(`Moved to ${folder.name}`);
+        } catch (error) {
+            toast.error('Failed to move bookmark');
+        }
+    };
+
     const hasChildren = folder.children && folder.children.length > 0;
     const location = useLocation();
     const isActive = location.pathname === `/folder/${folder.id}`;
 
     return (
         <div>
-            <div className="flex items-center">
+            <div
+                className={cn(
+                    "flex items-center rounded-md transition-colors",
+                    isDragOver && "bg-primary/10 ring-2 ring-primary/50"
+                )}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+            >
                 {hasChildren && (
                     <Button
                         variant="ghost"
@@ -135,7 +168,7 @@ function FolderItem({ folder, level = 0 }: { folder: any; level?: number }) {
                         variant={isActive ? 'secondary' : 'ghost'}
                         className={cn("w-full justify-start h-9", !hasChildren && "pl-8")}
                     >
-                        <Folder className={cn("mr-2 h-4 w-4", isActive ? "fill-current" : "")} />
+                        <Folder className={cn("mr-2 h-4 w-4", isActive ? "fill-current" : "")} style={{ color: folder.color || undefined }} />
                         <span className="truncate">{folder.name}</span>
                     </Button>
                 </Link>
